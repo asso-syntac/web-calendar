@@ -729,18 +729,46 @@
         };
         
         const formatTime = (event) => {
-          if (event.allDay) {
-            return 'Journee entiere';
-          }
-          
           const start = new Date(event.start);
           const end = event.end ? new Date(event.end) : null;
+          
+          const formatEndDate = (endDate) => {
+            const today = new Date();
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            
+            if (endDate.toDateString() === today.toDateString()) {
+              return "aujourd'hui";
+            } else if (endDate.toDateString() === tomorrow.toDateString()) {
+              return "demain";
+            }
+            return endDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+          };
+          
+          // Multi-day event check
+          const isMultiDay = end && end.toDateString() !== start.toDateString();
+          
+          if (event.allDay) {
+            if (isMultiDay) {
+              // For all-day events, end date is exclusive (next day at 00:00)
+              const actualEnd = new Date(end);
+              actualEnd.setDate(actualEnd.getDate() - 1);
+              if (actualEnd.toDateString() !== start.toDateString()) {
+                return `→ ${formatEndDate(actualEnd)}`;
+              }
+            }
+            return 'Journee entiere';
+          }
           
           const startTime = start.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
           
           if (end && end.toDateString() === start.toDateString()) {
             const endTime = end.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
             return `${startTime} - ${endTime}`;
+          }
+          
+          if (isMultiDay) {
+            return `${startTime} → ${formatEndDate(end)}`;
           }
           
           return startTime;
