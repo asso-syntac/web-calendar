@@ -400,9 +400,14 @@
       margin-top: 8px;
     }
     
-    .event-location::before {
-      content: "@ ";
-      font-weight: 600;
+    .event-location a {
+      color: #666;
+      text-decoration: none;
+    }
+    
+    .event-location a:hover {
+      text-decoration: underline;
+      color: #1a73e8;
     }
     
     .event-description {
@@ -576,7 +581,11 @@
                   </div>
                   <div class="event-time">{{ formatTime(event) }}</div>
                 </div>
-                <div v-if="event.location" class="event-location">{{ event.location }}</div>
+                <div v-if="event.location" class="event-location">
+                  <a :href="'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(event.location)" target="_blank" @click.stop>
+                    📍 {{ event.location }}
+                  </a>
+                </div>
                 <div 
                   v-if="event.description" 
                   class="event-description" 
