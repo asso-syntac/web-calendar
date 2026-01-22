@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calendrier</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: #f5f5f5;
+      color: #333;
+      line-height: 1.5;
+    }
+    
+    /* Sidebar */
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 320px;
+      height: 100vh;
+      background: white;
+      box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+      transform: translateX(-100%);
+      transition: transform 0.3s ease;
+      z-index: 1000;
+      overflow-y: auto;
+    }
+    
+    .sidebar.open {
+      transform: translateX(0);
+    }
+    
+    .sidebar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px;
+      border-bottom: 1px solid #eee;
+    }
+    
+    .sidebar-header h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+    
+    .sidebar-close {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: #666;
+      padding: 5px;
+      line-height: 1;
+    }
+    
+    .sidebar-close:hover {
+      color: #333;
+    }
+    
+    .sidebar-section {
+      padding: 20px;
+      border-bottom: 1px solid #eee;
+    }
+    
+    .sidebar-section h3 {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #666;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.3);
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s;
+      z-index: 999;
+    }
+    
+    .overlay.visible {
+      opacity: 1;
+      visibility: visible;
+    }
+    
+    /* Main content */
+    .main {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+    }
+    
+    .menu-btn {
+      background: none;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 8px 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85rem;
+      color: #555;
+      transition: all 0.2s;
+    }
+    
+    .menu-btn:hover {
+      background: #f0f0f0;
+      border-color: #ccc;
+    }
+    
+    .menu-btn svg {
+      width: 18px;
+      height: 18px;
+    }
+    
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    
+    .refresh-info {
+      font-size: 0.8rem;
+      color: #666;
+    }
+    
+    /* Source filters in sidebar */
+    .source-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    
+    .source-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s;
+      background: #f8f8f8;
+    }
+    
+    .source-item:hover {
+      background: #f0f0f0;
+    }
+    
+    .source-item input {
+      width: 18px;
+      height: 18px;
+      min-width: 18px;
+      cursor: pointer;
+      accent-color: #4285f4;
+    }
+    
+    .color-dot {
+      width: 12px;
+      height: 12px;
+      min-width: 12px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    
+    .source-item-name {
+      flex: 1;
+      font-size: 0.9rem;
+    }
+    
+    /* View toggle */
+    .view-toggle {
+      display: flex;
+      gap: 0;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid #ddd;
+    }
+    
+    .view-toggle button {
+      flex: 1;
+      padding: 10px 16px;
+      border: none;
+      background: white;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: all 0.2s;
+    }
+    
+    .view-toggle button:not(:last-child) {
+      border-right: 1px solid #ddd;
+    }
+    
+    .view-toggle button.active {
+      background: #4285f4;
+      color: white;
+    }
+    
+    .view-toggle button:hover:not(.active) {
+      background: #f5f5f5;
+    }
+    
+    /* ICS section */
+    .ics-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    
+    .ics-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+      background: #f5f5f5;
+      border-radius: 8px;
+      font-size: 0.85rem;
+    }
+    
+    .ics-item-info {
+      flex-grow: 1;
+      min-width: 0;
+    }
+    
+    .ics-item-name {
+      font-weight: 500;
+      margin-bottom: 2px;
+    }
+    
+    .ics-item-url {
+      font-family: monospace;
+      font-size: 0.7rem;
+      color: #666;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    /* Buttons */
+    .btn {
+      background: #4285f4;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: background 0.2s;
+    }
+    
+    .btn:hover {
+      background: #3367d6;
+    }
+    
+    .btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    
+    .btn-small {
+      background: #4285f4;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.75rem;
+      white-space: nowrap;
+      transition: background 0.2s;
+    }
+    
+    .btn-small:hover {
+      background: #3367d6;
+    }
+    
+    .btn-small.copied {
+      background: #0f9d58;
+    }
+    
+    /* Events */
+    .active-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 15px;
+    }
+    
+    .filter-tag {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      color: white;
+    }
+    
+    .events-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    
+    .date-group {
+      margin-bottom: 20px;
+    }
+    
+    .date-header {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #666;
+      padding: 8px 0;
+      border-bottom: 1px solid #ddd;
+      margin-bottom: 10px;
+      position: sticky;
+      top: 0;
+      background: #f5f5f5;
+      z-index: 10;
+    }
+    
+    .event-card {
+      background: white;
+      border-radius: 8px;
+      padding: 15px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      border-left: 4px solid #ccc;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .event-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    .event-card.expandable {
+      cursor: pointer;
+    }
+    
+    .event-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    
+    .event-title {
+      font-weight: 600;
+      font-size: 1rem;
+    }
+    
+    .event-time {
+      font-size: 0.85rem;
+      color: #666;
+      white-space: nowrap;
+    }
+    
+    .event-source {
+      font-size: 0.75rem;
+      color: #999;
+      margin-top: 4px;
+    }
+    
+    .event-location {
+      font-size: 0.85rem;
+      color: #666;
+      margin-top: 8px;
+    }
+    
+    .event-location::before {
+      content: "@ ";
+      font-weight: 600;
+    }
+    
+    .event-description {
+      font-size: 0.85rem;
+      color: #666;
+      margin-top: 8px;
+      white-space: pre-line;
+    }
+    
+    .past-event {
+      opacity: 0.6;
+    }
+    
+    .loading, .no-events {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+      background: white;
+      border-radius: 8px;
+    }
+    
+    .load-more {
+      text-align: center;
+      padding: 20px;
+      color: #999;
+      font-size: 0.85rem;
+    }
+    
+    .load-more-hint {
+      opacity: 0.7;
+    }
+    
+    /* Responsive */
+    @media (max-width: 600px) {
+      .sidebar {
+        width: 100%;
+      }
+      
+      .main {
+        padding: 15px;
+      }
+      
+      .header-actions .refresh-info {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <!-- Overlay -->
+    <div class="overlay" :class="{ visible: sidebarOpen }" @click="sidebarOpen = false"></div>
+    
+    <!-- Sidebar -->
+    <aside class="sidebar" :class="{ open: sidebarOpen }">
+      <div class="sidebar-header">
+        <h2>Parametres</h2>
+        <button class="sidebar-close" @click="sidebarOpen = false">&times;</button>
+      </div>
+      
+      <div class="sidebar-section">
+        <h3>Affichage</h3>
+        <div class="view-toggle">
+          <button :class="{ active: viewMode === 'upcoming' }" @click="viewMode = 'upcoming'">
+            A venir
+          </button>
+          <button :class="{ active: viewMode === 'all' }" @click="viewMode = 'all'">
+            Tous
+          </button>
+        </div>
+      </div>
+      
+      <div class="sidebar-section">
+        <h3>Sources</h3>
+        <div class="source-list">
+          <label v-for="source in sources" :key="source.id" class="source-item">
+            <input type="checkbox" :value="source.id" v-model="selectedSources">
+            <span class="color-dot" :style="{ background: source.color }"></span>
+            <span class="source-item-name">{{ source.name }}</span>
+          </label>
+        </div>
+      </div>
+      
+      <div class="sidebar-section">
+        <h3>S'abonner (ICS)</h3>
+        <div class="ics-list">
+          <div class="ics-item">
+            <div class="ics-item-info">
+              <div class="ics-item-name">Tous les calendriers</div>
+              <div class="ics-item-url">{{ combinedIcsUrl }}</div>
+            </div>
+            <button class="btn-small" :class="{ copied: copiedUrl === 'all' }" @click="copyUrl(combinedIcsUrl, 'all')">
+              {{ copiedUrl === 'all' ? 'OK!' : 'Copier' }}
+            </button>
+          </div>
+          <div v-for="source in sources" :key="source.id" class="ics-item">
+            <span class="color-dot" :style="{ background: source.color }"></span>
+            <div class="ics-item-info">
+              <div class="ics-item-name">{{ source.name }}</div>
+              <div class="ics-item-url">{{ source.icsUrl }}</div>
+            </div>
+            <button class="btn-small" :class="{ copied: copiedUrl === source.id }" @click="copyUrl(source.icsUrl, source.id)">
+              {{ copiedUrl === source.id ? 'OK!' : 'Copier' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </aside>
+    
+    <!-- Main content -->
+    <main class="main">
+      <header>
+        <div class="header-left">
+          <button class="menu-btn" @click="sidebarOpen = true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+            Filtres
+          </button>
+          <h1>{{ title }}</h1>
+        </div>
+        <div class="header-actions">
+          <span class="refresh-info" v-if="lastRefresh">
+            MAJ: {{ formatRefreshTime(lastRefresh) }}
+          </span>
+          <button class="btn" @click="refresh" :disabled="loading">
+            {{ loading ? '...' : 'Actualiser' }}
+          </button>
+        </div>
+      </header>
+      
+      <!-- Active filters preview -->
+      <div class="active-filters" v-if="selectedSources.length < sources.length && selectedSources.length > 0">
+        <span 
+          v-for="source in sources.filter(s => selectedSources.includes(s.id))" 
+          :key="source.id"
+          class="filter-tag"
+          :style="{ background: source.color }"
+        >
+          {{ source.name }}
+        </span>
+      </div>
+      
+      <div v-if="loading && events.length === 0" class="loading">
+        Chargement des evenements...
+      </div>
+      
+      <div v-else-if="filteredEvents.length === 0" class="no-events">
+        Aucun evenement a afficher
+      </div>
+      
+      <div v-else>
+        <div class="events-list">
+          <div v-for="(dayEvents, date) in groupedEvents" :key="date" class="date-group">
+            <div class="date-header">{{ formatDateHeader(date) }}</div>
+            <div class="events-list">
+              <div 
+                v-for="event in dayEvents" 
+                :key="event.id"
+                class="event-card"
+                :class="{ 'past-event': isPast(event), 'expandable': event.description && event.description.length > 200 }"
+                :style="{ borderLeftColor: event.color }"
+                @click="event.description && event.description.length > 200 ? toggleExpand(event.id) : null"
+              >
+                <div class="event-header">
+                  <div>
+                    <div class="event-title">{{ event.title }}</div>
+                    <div class="event-source">{{ event.sourceName }}</div>
+                  </div>
+                  <div class="event-time">{{ formatTime(event) }}</div>
+                </div>
+                <div v-if="event.location" class="event-location">{{ event.location }}</div>
+                <div 
+                  v-if="event.description" 
+                  class="event-description" 
+                  v-html="expandedEvents.has(event.id) ? event.description : truncate(event.description, 200)"
+                ></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div v-if="hasMore" class="load-more">
+          <span v-if="loadingMore">Chargement...</span>
+          <span v-else class="load-more-hint">{{ displayedEvents.length }} / {{ filteredEvents.length }} evenements</span>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const { createApp, ref, computed, onMounted, onUnmounted, watch } = Vue;
+    
+    createApp({
+      setup() {
+        const sources = ref([]);
+        const events = ref([]);
+        const selectedSources = ref([]);
+        const loading = ref(false);
+        const lastRefresh = ref(null);
+        const viewMode = ref('upcoming');
+        const expandedEvents = ref(new Set());
+        const combinedIcsUrl = ref('');
+        const sidebarOpen = ref(false);
+        const copiedUrl = ref(null);
+        const title = ref('Calendrier');
+        const displayLimit = ref(20);
+        const loadingMore = ref(false);
+        
+        // Load selected sources from localStorage
+        const savedSources = localStorage.getItem('selectedSources');
+        if (savedSources) {
+          selectedSources.value = JSON.parse(savedSources);
+        }
+        
+        // Save selected sources to localStorage
+        watch(selectedSources, (newVal) => {
+          localStorage.setItem('selectedSources', JSON.stringify(newVal));
+        }, { deep: true });
+        
+        const fetchConfig = async () => {
+          const res = await fetch('/api/config');
+          const data = await res.json();
+          title.value = data.title;
+          document.title = data.title;
+        };
+        
+        const fetchSources = async () => {
+          const res = await fetch('/api/sources');
+          const data = await res.json();
+          sources.value = data.sources;
+          combinedIcsUrl.value = data.combinedIcsUrl;
+          
+          // If no saved selection, select all
+          if (selectedSources.value.length === 0) {
+            selectedSources.value = sources.value.map(s => s.id);
+          }
+        };
+        
+        const fetchEvents = async () => {
+          loading.value = true;
+          try {
+            const res = await fetch('/api/events');
+            const data = await res.json();
+            events.value = data.events;
+            lastRefresh.value = data.lastRefresh;
+          } finally {
+            loading.value = false;
+          }
+        };
+        
+        const refresh = async () => {
+          loading.value = true;
+          try {
+            await fetch('/api/refresh', { method: 'POST' });
+            await fetchEvents();
+          } finally {
+            loading.value = false;
+          }
+        };
+        
+        const filteredEvents = computed(() => {
+          let filtered = events.value.filter(e => selectedSources.value.includes(e.sourceId));
+          
+          if (viewMode.value === 'upcoming') {
+            const now = new Date();
+            now.setHours(0, 0, 0, 0);
+            filtered = filtered.filter(e => new Date(e.start) >= now);
+          }
+          
+          return filtered;
+        });
+        
+        const displayedEvents = computed(() => {
+          return filteredEvents.value.slice(0, displayLimit.value);
+        });
+        
+        const hasMore = computed(() => {
+          return filteredEvents.value.length > displayLimit.value;
+        });
+        
+        const groupedEvents = computed(() => {
+          const groups = {};
+          
+          for (const event of displayedEvents.value) {
+            const date = new Date(event.start).toDateString();
+            if (!groups[date]) {
+              groups[date] = [];
+            }
+            groups[date].push(event);
+          }
+          
+          return groups;
+        });
+        
+        const formatDateHeader = (dateString) => {
+          const date = new Date(dateString);
+          const today = new Date();
+          const tomorrow = new Date(today);
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          
+          if (date.toDateString() === today.toDateString()) {
+            return "Aujourd'hui";
+          } else if (date.toDateString() === tomorrow.toDateString()) {
+            return "Demain";
+          }
+          
+          return date.toLocaleDateString('fr-FR', { 
+            weekday: 'long', 
+            day: 'numeric', 
+            month: 'long',
+            year: date.getFullYear() !== today.getFullYear() ? 'numeric' : undefined
+          });
+        };
+        
+        const formatTime = (event) => {
+          if (event.allDay) {
+            return 'Journee entiere';
+          }
+          
+          const start = new Date(event.start);
+          const end = event.end ? new Date(event.end) : null;
+          
+          const startTime = start.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+          
+          if (end && end.toDateString() === start.toDateString()) {
+            const endTime = end.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+            return `${startTime} - ${endTime}`;
+          }
+          
+          return startTime;
+        };
+        
+        const formatRefreshTime = (isoString) => {
+          const date = new Date(isoString);
+          return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        };
+        
+        const isPast = (event) => {
+          const end = event.end ? new Date(event.end) : new Date(event.start);
+          return end < new Date();
+        };
+        
+        const truncate = (text, length) => {
+          if (text.length <= length) return text;
+          return text.substring(0, length) + '...';
+        };
+        
+        const toggleExpand = (eventId) => {
+          if (expandedEvents.value.has(eventId)) {
+            expandedEvents.value.delete(eventId);
+          } else {
+            expandedEvents.value.add(eventId);
+          }
+          expandedEvents.value = new Set(expandedEvents.value);
+        };
+        
+        const copyUrl = async (url, id) => {
+          try {
+            await navigator.clipboard.writeText(url);
+            copiedUrl.value = id;
+            setTimeout(() => {
+              copiedUrl.value = null;
+            }, 2000);
+          } catch (e) {
+            console.error('Failed to copy:', e);
+          }
+        };
+        
+        const loadMore = () => {
+          if (loadingMore.value || !hasMore.value) return;
+          loadingMore.value = true;
+          setTimeout(() => {
+            displayLimit.value += 20;
+            loadingMore.value = false;
+          }, 100);
+        };
+        
+        const handleScroll = () => {
+          const scrollY = window.scrollY;
+          const windowHeight = window.innerHeight;
+          const docHeight = document.documentElement.scrollHeight;
+          
+          if (scrollY + windowHeight >= docHeight - 300) {
+            loadMore();
+          }
+        };
+        
+        // Reset limit when filters change
+        watch([selectedSources, viewMode], () => {
+          displayLimit.value = 20;
+        });
+        
+        onMounted(async () => {
+          await fetchConfig();
+          await fetchSources();
+          await fetchEvents();
+          window.addEventListener('scroll', handleScroll);
+        });
+        
+        onUnmounted(() => {
+          window.removeEventListener('scroll', handleScroll);
+        });
+        
+        return {
+          sources,
+          events,
+          selectedSources,
+          loading,
+          lastRefresh,
+          viewMode,
+          expandedEvents,
+          combinedIcsUrl,
+          sidebarOpen,
+          copiedUrl,
+          title,
+          filteredEvents,
+          displayedEvents,
+          hasMore,
+          loadingMore,
+          groupedEvents,
+          refresh,
+          formatDateHeader,
+          formatTime,
+          formatRefreshTime,
+          isPast,
+          truncate,
+          toggleExpand,
+          copyUrl
+        };
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>

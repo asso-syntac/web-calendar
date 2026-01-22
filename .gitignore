@@ -1,0 +1,16 @@
+node_modules/
+npm-debug.log*
+*.log
+
+# Config with secrets
+config.yaml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo

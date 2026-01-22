@@ -1,0 +1,31 @@
+# Configuration du calendrier ICS
+
+# Titre affiché en haut de la page
+title: "Mon Calendrier"
+
+# Intervalle de rafraîchissement en minutes
+refreshInterval: 15
+
+# Port du serveur
+port: 3000
+
+# Liste des sources ICS
+# Pour Google Calendar : Paramètres > Calendrier > "Adresse secrète au format iCal"
+sources:
+  - id: perso
+    name: "Personnel"
+    url: "https://calendar.google.com/calendar/ical/xxx%40gmail.com/private-yyy/basic.ics"
+    color: "#4285f4"
+    enabled: true
+
+  - id: travail
+    name: "Travail"
+    url: "https://calendar.google.com/calendar/ical/xxx%40group.calendar.google.com/private-yyy/basic.ics"
+    color: "#0f9d58"
+    enabled: true
+
+  - id: famille
+    name: "Famille"
+    url: "https://calendar.google.com/calendar/ical/xxx%40group.calendar.google.com/private-yyy/basic.ics"
+    color: "#db4437"
+    enabled: true
