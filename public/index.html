@@ -311,22 +311,48 @@
       background: #0f9d58;
     }
     
-    /* Events */
-    .active-filters {
+    /* Source toggles */
+    .source-toggles {
       display: flex;
       flex-wrap: wrap;
-      gap: 6px;
+      gap: 8px;
       margin-bottom: 15px;
     }
     
-    .filter-tag {
+    .source-toggle {
       display: flex;
       align-items: center;
-      gap: 4px;
-      padding: 4px 10px;
+      gap: 6px;
+      padding: 6px 12px;
       border-radius: 20px;
-      font-size: 0.75rem;
+      font-size: 0.8rem;
+      border: 2px solid var(--source-color);
+      background: white;
+      color: #666;
+      cursor: pointer;
+      transition: all 0.2s;
+      opacity: 0.5;
+    }
+    
+    .source-toggle:hover {
+      opacity: 0.8;
+    }
+    
+    .source-toggle.active {
+      background: var(--source-color);
       color: white;
+      opacity: 1;
+    }
+    
+    .source-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--source-color);
+    }
+    
+    .source-toggle.active .source-dot {
+      background: white;
     }
     
     .events-list {
@@ -541,16 +567,19 @@
         </div>
       </header>
       
-      <!-- Active filters preview -->
-      <div class="active-filters" v-if="selectedSources.length < sources.length && selectedSources.length > 0">
-        <span 
-          v-for="source in sources.filter(s => selectedSources.includes(s.id))" 
+      <!-- Source toggles -->
+      <div class="source-toggles" v-if="sources.length > 0">
+        <button 
+          v-for="source in sources" 
           :key="source.id"
-          class="filter-tag"
-          :style="{ background: source.color }"
+          class="source-toggle"
+          :class="{ active: selectedSources.includes(source.id) }"
+          :style="{ '--source-color': source.color }"
+          @click="toggleSource(source.id)"
         >
+          <span class="source-dot"></span>
           {{ source.name }}
-        </span>
+        </button>
       </div>
       
       <div v-if="loading && events.length === 0" class="loading">
@@ -624,8 +653,9 @@
         
         // Load selected sources from localStorage
         const savedSources = localStorage.getItem('selectedSources');
-        if (savedSources) {
-          selectedSources.value = JSON.parse(savedSources);
+        const savedSourcesParsed = savedSources ? JSON.parse(savedSources) : null;
+        if (savedSourcesParsed && savedSourcesParsed.length > 0) {
+          selectedSources.value = savedSourcesParsed;
         }
         
         // Save selected sources to localStorage
@@ -646,9 +676,17 @@
           sources.value = data.sources;
           combinedIcsUrl.value = data.combinedIcsUrl;
           
+          const allSourceIds = sources.value.map(s => s.id);
+          
           // If no saved selection, select all
           if (selectedSources.value.length === 0) {
-            selectedSources.value = sources.value.map(s => s.id);
+            selectedSources.value = allSourceIds;
+          } else {
+            // Add any new sources that weren't in the saved selection
+            const newSources = allSourceIds.filter(id => !savedSourcesParsed?.includes(id));
+            if (newSources.length > 0) {
+              selectedSources.value = [...selectedSources.value, ...newSources];
+            }
           }
         };
         
@@ -661,6 +699,15 @@
             lastRefresh.value = data.lastRefresh;
           } finally {
             loading.value = false;
+          }
+        };
+        
+        const toggleSource = (sourceId) => {
+          const index = selectedSources.value.indexOf(sourceId);
+          if (index === -1) {
+            selectedSources.value.push(sourceId);
+          } else {
+            selectedSources.value.splice(index, 1);
           }
         };
         
@@ -869,6 +916,7 @@
           isPast,
           truncate,
           toggleExpand,
+          toggleSource,
           copyUrl
         };
       }
