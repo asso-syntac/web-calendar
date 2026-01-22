@@ -2,6 +2,8 @@
 
 Agrégateur de calendriers ICS simple et léger.
 
+![Screenshot](doc/screenshot.png)
+
 ## Fonctionnalités
 
 - Agrège plusieurs sources ICS (Google Calendar, etc.)
