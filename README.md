@@ -67,4 +67,4 @@ docker run -p 3000:3000 -v $(pwd)/config.yaml:/app/config.yaml calendrier
 
 ## License
 
-MIT
+GNU General Public License v3.0
