@@ -150,6 +150,15 @@ app.get('/api/events', (req, res) => {
     }
   }
   
+  // Filter upcoming events only
+  if (req.query.upcoming === 'true') {
+    const now = new Date();
+    allEvents = allEvents.filter(event => {
+      const end = event.end ? new Date(event.end) : new Date(event.start);
+      return end >= now;
+    });
+  }
+
   // Sort by start date
   allEvents.sort((a, b) => new Date(a.start) - new Date(b.start));
   
